@@ -63,9 +63,11 @@ def compute_reward(reward_list):
     N = len(reward_list)
 
 
-    deltas = np.diff(reward_list)
+    for i in range(N - 1):
+        deltas = reward_list[i + 1:] - reward_list[i]
+        total_deltas += deltas
 
-    meta_reward = np.sum(deltas) / N
+    meta_reward = np.sum(total_deltas) / N
 
     return meta_reward
 
