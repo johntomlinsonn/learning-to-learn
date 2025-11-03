@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-env = gym.make("CartPole-v0")
+env = gym.make("CartPole-v1")
 
 def build_model():
     class Cartpole_Network(nn.Module):
