@@ -8,8 +8,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import math
 
-env = gym.make("CartPole-v0")
+NUM_EPISODES = 500
+env = gym.make("CartPole-v1")
 
 def build_model():
     class Cartpole_Network(nn.Module):
@@ -74,9 +76,14 @@ def build_model():
     return Cartpole_Network, target_network, memory, optimizer, device
 
 
-"""
-def compute_reward(raw_state):
-    x, x_dot, theta, theta_dot = raw_state
+
+#The enviorment outputs an array of 4 values: cart position, cart velocity, pole angle, pole angular velocity
+def compute_reward(env):
+    THETA_LIMIT_RADIANS = 12 * 2 * math.pi / 360  # 12 degrees to radians
+    X_LIMIT = 1.0
+
+    state = env.state
+    x, x_dot, theta, theta_dot = state
     angle_error = abs(theta)
     position_error = abs(x)
     reward = 1.0
@@ -85,6 +92,36 @@ def compute_reward(raw_state):
     reward -= 0.01 * (abs(x_dot) + abs(theta_dot))
     return max(reward, -2.0)
 
-"""
+def select_action(state, policy_net, device, epsilon, action_dim):
+    if np.random.rand() < epsilon:
+        return np.random.randint(action_dim)
+    else:
+        state = torch.FloatTensor(state).unsqueeze(0).to(device)
+        with torch.no_grad():
+            q_values = policy_net(state)
+        return q_values.max(1)[1].item()
 
-print(env.action_space)
+def update_target_network(policy_net, target_net):
+    target_net.load_state_dict(policy_net.state_dict())
+
+
+def optimize_model(policy_net, target_net, memory, optimizer, device, batch_size=64, gamma=0.99):
+    if len(memory) < batch_size:
+        return
+    state, action, reward, next_state, done = memory.sample(batch_size)
+
+    state = torch.FloatTensor(state).to(device)
+    next_state = torch.FloatTensor(next_state).to(device)
+    action = torch.LongTensor(action).unsqueeze(1).to(device)
+    reward = torch.FloatTensor(reward).unsqueeze(1).to(device)
+    done = torch.FloatTensor(done).unsqueeze(1).to(device)
+
+    q_values = policy_net(state).gather(1, action)
+    next_q_values = target_net(next_state).max(1)[0].unsqueeze(1)
+    expected_q_values = reward + (gamma * next_q_values * (1 - done))
+
+    loss = F.mse_loss(q_values, expected_q_values)
+
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
