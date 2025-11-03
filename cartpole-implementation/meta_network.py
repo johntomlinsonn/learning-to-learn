@@ -46,3 +46,9 @@ def build_model(state_dim, action_dim):
 
         def __len__(self):
             return len(self.buffer)
+
+    meta_network = metaNetwork(state_dim, action_dim)
+
+
+
+    return meta_network, ReplayBuffer(10000)
