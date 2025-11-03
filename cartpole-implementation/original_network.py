@@ -55,15 +55,15 @@ def build_model():
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
 
-    meta_network = Cartpole_Network(state_dim, action_dim)
+    Cartpole_Network = Cartpole_Network(state_dim, action_dim)
     #target network learns more slowly to stabilize training
     target_network = Cartpole_Network(state_dim, action_dim)
-    #copying the weights from the meta network to the target network
-    target_network.load_state_dict(meta_network.state_dict())
+    #copying the weights from the Cartpole_Network to the target network
+    target_network.load_state_dict(Cartpole_Network.state_dict())
     #moving the model to eval mode
     target_network.eval()
 
-    return meta_network, target_network, ReplayBuffer(10000)
+    return Cartpole_Network, target_network, ReplayBuffer(10000)
 
 
 
