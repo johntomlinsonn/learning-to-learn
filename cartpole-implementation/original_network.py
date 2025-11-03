@@ -63,7 +63,15 @@ def build_model():
     #moving the model to eval mode
     target_network.eval()
 
-    return Cartpole_Network, target_network, ReplayBuffer(10000)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    Cartpole_Network.to(device)
+    target_network.to(device)
+
+    optimizer = optim.Adam(Cartpole_Network.parameters(), lr=5e-4)
+    #storing the experiences
+    memory = ReplayBuffer(10000)
+
+    return Cartpole_Network, target_network, memory, optimizer, device
 
 
 
