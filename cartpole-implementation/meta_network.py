@@ -58,14 +58,15 @@ def build_model(state_dim, action_dim):
 
 
 def compute_reward(reward_list):
-   
+
     reward_list = np.array(reward_list, dtype=float)
     N = len(reward_list)
-
 
     for i in range(N - 1):
         deltas = reward_list[i + 1:] - reward_list[i]
         total_deltas += deltas
+    
+    total_deltas = np.array(total_deltas, dtype=float)
 
     meta_reward = np.sum(total_deltas) / N
 

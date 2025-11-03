@@ -10,8 +10,6 @@ import torch.nn.functional as F
 import torch.optim as optim
 import math
 
-NUM_EPISODES = 500
-env = gym.make("CartPole-v1")
 
 def build_model():
     class Cartpole_Network(nn.Module):
@@ -75,6 +73,9 @@ def build_model():
 
     return Cartpole_Network, target_network, memory, optimizer, device
 
+def build_env():
+    env = gym.make("CartPole-v1")
+    return env
 
 
 #The enviorment outputs an array of 4 values: cart position, cart velocity, pole angle, pole angular velocity
