@@ -66,9 +66,8 @@ def compute_reward(reward_list):
         deltas = reward_list[i + 1:] - reward_list[i]
         total_deltas += deltas
     
-    total_deltas = np.array(total_deltas, dtype=float)
 
     meta_reward = np.sum(total_deltas) / N
 
-    return meta_reward
+    return np.array(meta_reward,dtype=float)
 
