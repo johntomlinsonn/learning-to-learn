@@ -52,3 +52,20 @@ def build_model(state_dim, action_dim):
 
 
     return meta_network, ReplayBuffer(10000)
+
+
+
+
+
+def compute_reward(reward_list):
+   
+    reward_list = np.array(reward_list, dtype=float)
+    N = len(reward_list)
+
+
+    deltas = np.diff(reward_list)
+
+    meta_reward = np.sum(deltas) / N
+
+    return meta_reward
+
