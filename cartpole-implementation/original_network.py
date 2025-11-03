@@ -51,7 +51,17 @@ def build_model():
         
         def __len__(self):
             return len(self.buffer)
-        
-    return Meta_Network, ReplayBuffer
 
+    state_dim = env.observation_space.shape[0]
+    action_dim = env.action_space.n
+
+    meta_network = Meta_Network(state_dim, action_dim)
+    #target network learns more slowly to stabilize training
+    target_network = Meta_Network(state_dim, action_dim)
+    #copying the weights from the meta network to the target network
+    target_network.load_state_dict(meta_network.state_dict())
+    #moving the model to eval mode
+    target_network.eval()
+
+    return meta_network, target_network, ReplayBuffer
 
