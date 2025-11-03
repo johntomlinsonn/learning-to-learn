@@ -63,5 +63,17 @@ def build_model():
     #moving the model to eval mode
     target_network.eval()
 
-    return meta_network, target_network, ReplayBuffer
+    return meta_network, target_network, ReplayBuffer(10000)
+
+
+
+def compute_reward(raw_state):
+    x, x_dot, theta, theta_dot = raw_state
+    angle_error = abs(theta)
+    position_error = abs(x)
+    reward = 1.0
+    reward -= 2.0 * (angle_error / THETA_LIMIT_RADIANS)
+    reward -= 0.5 * (position_error / X_LIMIT)
+    reward -= 0.01 * (abs(x_dot) + abs(theta_dot))
+    return max(reward, -2.0)
 
