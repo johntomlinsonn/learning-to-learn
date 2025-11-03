@@ -12,9 +12,9 @@ import torch.optim as optim
 env = gym.make("CartPole-v0")
 
 def build_model():
-    class Meta_Network(nn.Module):
+    class Cartpole_Network(nn.Module):
         def __init__(self, state_size, action_size, hidden_size=128):
-            super(Meta_Network, self).__init__()
+            super(Cartpole_Network, self).__init__()
             #nueral network with 2 hidden layers
             self.fc1 = nn.Linear(state_size, hidden_size)
             self.fc2 = nn.Linear(hidden_size, hidden_size)
@@ -55,9 +55,9 @@ def build_model():
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
 
-    meta_network = Meta_Network(state_dim, action_dim)
+    meta_network = Cartpole_Network(state_dim, action_dim)
     #target network learns more slowly to stabilize training
-    target_network = Meta_Network(state_dim, action_dim)
+    target_network = Cartpole_Network(state_dim, action_dim)
     #copying the weights from the meta network to the target network
     target_network.load_state_dict(meta_network.state_dict())
     #moving the model to eval mode
