@@ -3,8 +3,6 @@ import gym
 import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
-import mujoco
-import mujoco_viewer
 import numpy as np
 import torch
 import torch.nn as nn
@@ -14,19 +12,20 @@ import torch.optim as optim
 env = gym.make("CartPole-v0")
 
 def build_model():
-    def __init__(self, state_size, action_size, hidden_size=128):
-        super(QNetwork, self).__init__()
-        #nueral network with 2 hidden layers
-        self.fc1 = nn.Linear(state_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, hidden_size)
-        #outputs the q value for each action, based on how well the action will do
-        self.fc3 = nn.Linear(hidden_size, action_size)
-        
-        def forward(self, x):
-            x = torch.relu(self.fc1(x))
-            x = torch.relu(self.fc2(x))
-            return self.fc3(x)
-        
+    class Meta_Network(nn.Module):
+        def __init__(self, state_size, action_size, hidden_size=128):
+            super(Meta_Network, self).__init__()
+            #nueral network with 2 hidden layers
+            self.fc1 = nn.Linear(state_size, hidden_size)
+            self.fc2 = nn.Linear(hidden_size, hidden_size)
+            #outputs the q value for each action, based on how well the action will do
+            self.fc3 = nn.Linear(hidden_size, action_size)
+            
+            def forward(self, x):
+                x = torch.relu(self.fc1(x))
+                x = torch.relu(self.fc2(x))
+                return self.fc3(x)
+            
     class ReplayBuffer:
         def __init__(self, capacity):
             self.capacity = capacity
@@ -52,3 +51,7 @@ def build_model():
         
         def __len__(self):
             return len(self.buffer)
+        
+    return Meta_Network, ReplayBuffer
+
+
