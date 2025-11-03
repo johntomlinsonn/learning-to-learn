@@ -1,5 +1,5 @@
 #Code from original OpenAI Gym CartPole example with minor modifications
-import gym
+import gymnasium as gym
 import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
@@ -74,7 +74,7 @@ def build_model():
     return Cartpole_Network, target_network, memory, optimizer, device
 
 
-
+"""
 def compute_reward(raw_state):
     x, x_dot, theta, theta_dot = raw_state
     angle_error = abs(theta)
@@ -85,3 +85,6 @@ def compute_reward(raw_state):
     reward -= 0.01 * (abs(x_dot) + abs(theta_dot))
     return max(reward, -2.0)
 
+"""
+
+print(env.action_space)
