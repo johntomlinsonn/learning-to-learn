@@ -8,7 +8,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import math
 
+NUM_EPISODES = 500
 env = gym.make("CartPole-v1")
 
 def build_model():
@@ -74,9 +76,14 @@ def build_model():
     return Cartpole_Network, target_network, memory, optimizer, device
 
 
-"""
-def compute_reward(raw_state):
-    x, x_dot, theta, theta_dot = raw_state
+
+#The enviorment outputs an array of 4 values: cart position, cart velocity, pole angle, pole angular velocity
+def compute_reward(env):
+    THETA_LIMIT_RADIANS = 12 * 2 * math.pi / 360  # 12 degrees to radians
+    X_LIMIT = 1.0
+
+    state = env.state
+    x, x_dot, theta, theta_dot = state
     angle_error = abs(theta)
     position_error = abs(x)
     reward = 1.0
@@ -85,6 +92,6 @@ def compute_reward(raw_state):
     reward -= 0.01 * (abs(x_dot) + abs(theta_dot))
     return max(reward, -2.0)
 
-"""
 
-print(env.action_space)
+def training_loop():
+    
