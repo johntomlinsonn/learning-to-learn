@@ -13,13 +13,14 @@ def build_model(state_dim, action_dim):
             # neural network with 2 hidden layers
             self.fc1 = nn.Linear(state_size, hidden_size)
             self.fc2 = nn.Linear(hidden_size, hidden_size)
-            # outputs the q value for each action, based on how well the action will do
-            self.fc3 = nn.Linear(hidden_size, action_size)
+            # outputs a single continuous action value between -1 and 1
+            self.fc3 = nn.Linear(hidden_size, 1)
 
         def forward(self, x):
             x = torch.relu(self.fc1(x))
             x = torch.relu(self.fc2(x))
-            return self.fc3(x)
+            # Use tanh to bound the output between -1 and 1
+            return torch.tanh(self.fc3(x))
         
     class ReplayBuffer:
         def __init__(self, capacity):
@@ -55,10 +56,23 @@ def build_model(state_dim, action_dim):
 
 
 
+def sliding_window(data, window_size, stride=1):
+    data = np.array(data)
+    
+    # Calculate the nuber of windows convert to int
+    n_samples = int((len(data) - window_size) // stride + 1)
+    
+    # Create start indices for each window
+    start_indices = np.arange(n_samples, dtype=int) * stride
+    
+    # Create the windows
+    windows = np.array([data[i:i + window_size] for i in start_indices])
+    
+    return windows
+
 
 
 def compute_reward(reward_list):
-
     reward_list = np.array(reward_list, dtype=float)
     N = len(reward_list)
 
@@ -66,7 +80,6 @@ def compute_reward(reward_list):
         deltas = reward_list[i + 1:] - reward_list[i]
         total_deltas += deltas
     
-
     meta_reward = np.sum(total_deltas) / N
 
     return np.array(meta_reward,dtype=float)
