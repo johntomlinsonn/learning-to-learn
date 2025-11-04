@@ -82,8 +82,8 @@ def build_env():
 
 #The enviorment outputs an array of 4 values: cart position, cart velocity, pole angle, pole angular velocity
 def compute_reward(env):
-    THETA_LIMIT_RADIANS = 12 * 2 * math.pi / 360  # 12 degrees to radians
-    X_LIMIT = 1.0
+    THETA_LIMIT_RADIANS = math.radians(12)
+    X_LIMIT = 4.8
 
     state = env.state
     x, x_dot, theta, theta_dot = state
@@ -97,7 +97,7 @@ def compute_reward(env):
 
 def select_action(state, policy_net, device, epsilon, action_dim):
     if np.random.rand() < epsilon:
-        return np.random.randint(action_dim)
+        return np.random.randint(env.action_space.n)
     else:
         state = torch.FloatTensor(state).unsqueeze(0).to(device)
         with torch.no_grad():
