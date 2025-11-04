@@ -58,7 +58,6 @@ def build_model(state_dim, action_dim):
 
 
 def compute_reward(reward_list):
-
     reward_list = np.array(reward_list, dtype=float)
     N = len(reward_list)
 
