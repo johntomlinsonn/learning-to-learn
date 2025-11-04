@@ -71,7 +71,7 @@ def sliding_window(data, window_size, stride=1):
     return windows
 
 
-def sliding_window(data,window_size):
+def sliding_window2(data,window_size):
     new_list = []
     length = len(data)
     for i in range(window_size):
