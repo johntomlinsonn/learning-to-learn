@@ -71,6 +71,16 @@ def sliding_window(data, window_size, stride=1):
     return windows
 
 
+def sliding_window(data,window_size):
+    new_list = []
+    length = len(data)
+    for i in range(window_size):
+        new_list.append(data[(length - window_size) + i])
+
+    return new_list
+        
+
+
 
 def compute_reward(reward_list):
     reward_list = np.array(reward_list, dtype=float)
@@ -84,3 +94,5 @@ def compute_reward(reward_list):
 
     return np.array(meta_reward,dtype=float)
 
+window = [1,2,3,4,5,6,7,8,9]
+print(sliding_window(window,4))
