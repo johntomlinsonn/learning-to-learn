@@ -9,9 +9,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import math
+import random
 
 
 def build_model():
+    env = build_env()
     class Cartpole_Network(nn.Module):
         def __init__(self, state_size, action_size, hidden_size=128):
             super(Cartpole_Network, self).__init__()
@@ -21,10 +23,10 @@ def build_model():
             #outputs the q value for each action, based on how well the action will do
             self.fc3 = nn.Linear(hidden_size, action_size)
             
-            def forward(self, x):
-                x = torch.relu(self.fc1(x))
-                x = torch.relu(self.fc2(x))
-                return self.fc3(x)
+        def forward(self, x):
+            x = torch.relu(self.fc1(x))
+            x = torch.relu(self.fc2(x))
+            return self.fc3(x)
             
     class ReplayBuffer:
         def __init__(self, capacity):
@@ -45,7 +47,7 @@ def build_model():
             self.position = (self.position + 1) % self.capacity
 
         def sample(self, batch_size):
-            batch = torch.rand.sample(self.buffer, batch_size)
+            batch = random.sample(self.buffer, batch_size)
             state, action, reward, next_state, done = map(np.stack, zip(*batch))
             return state, action, reward, next_state, done
         
@@ -55,23 +57,23 @@ def build_model():
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
 
-    Cartpole_Network = Cartpole_Network(state_dim, action_dim)
+    policy_net = Cartpole_Network(state_dim, action_dim)
     #target network learns more slowly to stabilize training
     target_network = Cartpole_Network(state_dim, action_dim)
     #copying the weights from the Cartpole_Network to the target network
-    target_network.load_state_dict(Cartpole_Network.state_dict())
+    target_network.load_state_dict(policy_net.state_dict())
     #moving the model to eval mode
     target_network.eval()
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    Cartpole_Network.to(device)
+    policy_net.to(device)
     target_network.to(device)
 
-    optimizer = optim.Adam(Cartpole_Network.parameters(), lr=5e-4)
+    optimizer = optim.Adam(policy_net.parameters(), lr=5e-4)
     #storing the experiences
     memory = ReplayBuffer(10000)
 
-    return Cartpole_Network, target_network, memory, optimizer, device
+    return policy_net, target_network, memory, optimizer, device, env
 
 def build_env():
     env = gym.make("CartPole-v1")
@@ -104,6 +106,7 @@ def select_action(state, policy_net, device, epsilon, action_dim):
 
 def update_target_network(policy_net, target_net):
     target_net.load_state_dict(policy_net.state_dict())
+    return target_net
 
 
 def optimize_model(policy_net, target_net, memory, optimizer, device, batch_size=64, gamma=0.99):
