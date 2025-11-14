@@ -6,9 +6,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-def build_model(state_dim, action_dim):
+def build_model(state_dim,):
     class metaNetwork(nn.Module):
-        def __init__(self, state_size, action_size, hidden_size=128):
+        def __init__(self, state_size, hidden_size=128):
             super(metaNetwork, self).__init__()
             # neural network with 2 hidden layers
             self.fc1 = nn.Linear(state_size, hidden_size)
