@@ -95,7 +95,7 @@ def compute_reward(env):
     reward -= 0.01 * (abs(x_dot) + abs(theta_dot))
     return max(reward, -2.0)
 
-def select_action(state, policy_net, device, epsilon, action_dim):
+def select_action(state, policy_net, device, epsilon, env):
     if np.random.rand() < epsilon:
         return np.random.randint(env.action_space.n)
     else:
