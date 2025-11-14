@@ -129,3 +129,4 @@ def optimize_model(policy_net, target_net, memory, optimizer, device, batch_size
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
+
