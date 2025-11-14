@@ -77,6 +77,3 @@ def compute_reward(reward_list):
     meta_reward = np.sum(total_deltas) / N
 
     return np.array(meta_reward,dtype=float)
-
-window = [1,2,3,4,5,6,7,8,9]
-print(sliding_window(window,4))
