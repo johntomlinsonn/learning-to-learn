@@ -55,22 +55,6 @@ def build_model(state_dim, action_dim):
     return meta_network, ReplayBuffer(10000)
 
 
-
-def sliding_window(data, window_size, stride=1):
-    data = np.array(data)
-    
-    # Calculate the nuber of windows convert to int
-    n_samples = int((len(data) - window_size) // stride + 1)
-    
-    # Create start indices for each window
-    start_indices = np.arange(n_samples, dtype=int) * stride
-    
-    # Create the windows
-    windows = np.array([data[i:i + window_size] for i in start_indices])
-    
-    return windows
-
-
 def sliding_window2(data,window_size):
     new_list = []
     length = len(data)
