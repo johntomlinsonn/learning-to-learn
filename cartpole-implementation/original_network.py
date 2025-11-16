@@ -10,6 +10,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import math
 import random
+from gymnasium.utils.save_video import save_video
 
 
 def build_model():
@@ -76,7 +77,7 @@ def build_model():
     return policy_net, target_network, memory, optimizer, device, env
 
 def build_env():
-    env = gym.make("CartPole-v1")
+    env = gym.make("CartPole-v1",render_mode = "human")
     return env
 
 
@@ -130,3 +131,8 @@ def optimize_model(policy_net, target_net, memory, optimizer, device, batch_size
     loss.backward()
     optimizer.step()
 
+def save_best_model(episodes_finished, current_best_reward, reward,env):
+    if (reward > current_best_reward) and (episodes_finished > 100):
+        save_video(env, "best_model_video.mp4", fps=30)
+        current_best_reward = reward
+        

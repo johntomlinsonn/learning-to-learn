@@ -48,23 +48,18 @@ def build_model(state_dim,):
         def __len__(self):
             return len(self.buffer)
 
-    meta_network = metaNetwork(state_dim, action_dim)
-
-
+    meta_network = metaNetwork(state_dim, 1)
 
     return meta_network, ReplayBuffer(10000)
 
 
-def sliding_window2(data,window_size):
+def sliding_window(data,window_size):
     new_list = []
     length = len(data)
     for i in range(window_size):
         new_list.append(data[(length - window_size) + i])
 
     return new_list
-        
-
-
 
 def compute_reward(reward_list):
     reward_list = np.array(reward_list, dtype=float)
@@ -77,3 +72,49 @@ def compute_reward(reward_list):
     meta_reward = np.sum(total_deltas) / N
 
     return np.array(meta_reward,dtype=float)
+
+
+
+def select_action(state, original_action, reward_given, meta_net, device, epsilon, input_dim):
+    if np.random.rand() < epsilon:
+        return float(np.random.uniform(-1.0, 1.0))
+
+    features = np.asarray(state, dtype=np.float32).flatten()
+    features = np.concatenate([
+        features,
+        np.array([float(original_action), float(reward_given)], dtype=np.float32),
+    ])
+    if features.shape[0] < input_dim:
+        pad = np.zeros(input_dim - features.shape[0], dtype=np.float32)
+        features = np.concatenate([features, pad])
+    elif features.shape[0] > input_dim:
+        features = features[:input_dim]
+
+    state_t = torch.as_tensor(features, dtype=torch.float32, device=device).unsqueeze(0)
+    with torch.no_grad():
+        action_t = meta_net(state_t)
+    action = float(action_t.squeeze().item())
+    return float(np.clip(action, -1.0, 1.0))
+
+
+def optimize_model(meta_net, target_net, memory, optimizer, device, batch_size=64, gamma=0.99):
+    if len(memory) < batch_size:
+        return
+    state, action, reward, next_state, done = memory.sample(batch_size)
+
+    state = torch.FloatTensor(state).to(device)
+    next_state = torch.FloatTensor(next_state).to(device)
+    action = torch.LongTensor(action).unsqueeze(1).to(device)
+    reward = torch.FloatTensor(reward).unsqueeze(1).to(device)
+    done = torch.FloatTensor(done).unsqueeze(1).to(device)
+
+    q_values = meta_net(state).gather(1, action)
+    next_q_values = target_net(next_state).max(1)[0].unsqueeze(1)
+    expected_q_values = reward + (gamma * next_q_values * (1 - done))
+
+    loss = F.mse_loss(q_values, expected_q_values)
+
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+
