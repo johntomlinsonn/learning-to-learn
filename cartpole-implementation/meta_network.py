@@ -56,7 +56,7 @@ def build_model(state_dim,):
 def sliding_window(data,window_size):
     new_list = []
     length = len(data)
-    for i in range(max(window_size,length)):
+    for i in range(min(window_size,length)):
         new_list.append(data[(length - window_size) + i])
 
     return new_list
@@ -97,7 +97,7 @@ def select_action(state, original_action, reward_given, meta_net, device, epsilo
     return float(np.clip(action, -1.0, 1.0))
 
 
-def optimize_model(meta_net, target_net, memory, optimizer, device, batch_size=64, gamma=0.99):
+def optimize_model(meta_net, memory, optimizer, device, batch_size=64, gamma=0.99):
     if len(memory) < batch_size:
         return
     state, action, reward, next_state, done = memory.sample(batch_size)
@@ -109,7 +109,7 @@ def optimize_model(meta_net, target_net, memory, optimizer, device, batch_size=6
     done = torch.FloatTensor(done).unsqueeze(1).to(device)
 
     q_values = meta_net(state).gather(1, action)
-    next_q_values = target_net(next_state).max(1)[0].unsqueeze(1)
+    next_q_values = meta_net(next_state).max(1)[0].unsqueeze(1)
     expected_q_values = reward + (gamma * next_q_values * (1 - done))
 
     loss = F.mse_loss(q_values, expected_q_values)
