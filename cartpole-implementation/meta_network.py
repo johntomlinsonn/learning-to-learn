@@ -6,7 +6,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-def build_model(state_dim,):
+
+def build_model(state_dim, lr=1e-3, device=None):
     class metaNetwork(nn.Module):
         def __init__(self, state_size, hidden_size=128):
             super(metaNetwork, self).__init__()
@@ -15,12 +16,37 @@ def build_model(state_dim,):
             self.fc2 = nn.Linear(hidden_size, hidden_size)
             # outputs a single continuous action value between -1 and 1
             self.fc3 = nn.Linear(hidden_size, 1)
+            # training helpers (populated via configure_trainer)
+            self._meta_memory = None
+            self._meta_optimizer = None
+            self._meta_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            self._meta_batch_size = 64
+            self._meta_gamma = 0.99
 
         def forward(self, x):
             x = torch.relu(self.fc1(x))
             x = torch.relu(self.fc2(x))
             # Use tanh to bound the output between -1 and 1
             return torch.tanh(self.fc3(x))
+
+        def configure_trainer(self, memory, device=None, lr=1e-3, batch_size=64, gamma=0.99):
+            self._meta_memory = memory
+            self._meta_device = device or self._meta_device
+            self._meta_batch_size = batch_size
+            self._meta_gamma = gamma
+            self._meta_optimizer = optim.Adam(self.parameters(), lr=lr)
+
+        def optimize_model(self, memory=None, optimizer=None, device=None, batch_size=None, gamma=None):
+            memory = memory or self._meta_memory
+            optimizer = optimizer or self._meta_optimizer
+            device = device or self._meta_device
+            batch_size = batch_size or self._meta_batch_size
+            gamma = gamma or self._meta_gamma
+
+            if memory is None or optimizer is None:
+                raise ValueError("Meta network trainer is not configured. Call configure_trainer or pass memory/optimizer explicitly.")
+
+            _optimize_step(self, memory, optimizer, device, batch_size, gamma)
         
     class ReplayBuffer:
         def __init__(self, capacity):
@@ -49,8 +75,11 @@ def build_model(state_dim,):
             return len(self.buffer)
 
     meta_network = metaNetwork(state_dim, 1)
+    meta_memory = ReplayBuffer(10000)
+    trainer_device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    meta_network.configure_trainer(meta_memory, device=trainer_device, lr=lr)
 
-    return meta_network, ReplayBuffer(10000)
+    return meta_network, meta_memory
 
 
 def sliding_window(data,window_size):
@@ -64,6 +93,7 @@ def sliding_window(data,window_size):
 def compute_reward(reward_list):
     reward_list = np.array(reward_list, dtype=float)
     N = len(reward_list)
+    total_deltas = 0
 
     for i in range(N - 1):
         deltas = reward_list[i + 1:] - reward_list[i]
@@ -97,7 +127,7 @@ def select_action(state, original_action, reward_given, meta_net, device, epsilo
     return float(np.clip(action, -1.0, 1.0))
 
 
-def optimize_model(meta_net, memory, optimizer, device, batch_size=64, gamma=0.99):
+def _optimize_step(meta_net, memory, optimizer, device, batch_size=64, gamma=0.99):
     if len(memory) < batch_size:
         return
     state, action, reward, next_state, done = memory.sample(batch_size)
@@ -117,4 +147,9 @@ def optimize_model(meta_net, memory, optimizer, device, batch_size=64, gamma=0.9
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
+
+
+def optimize_model(meta_net, memory, optimizer, device, batch_size=64, gamma=0.99):
+    """Module-level helper retained for backward compatibility."""
+    _optimize_step(meta_net, memory, optimizer, device, batch_size, gamma)
 
