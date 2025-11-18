@@ -27,19 +27,29 @@ def build_model(state_dim):
             return torch.tanh(self.fc3(x))
         
     class ReplayBuffer:
-        def __init__(self, capacity):
+        def __init__(self, capacity, feature_dim):
             self.capacity = capacity
             self.buffer = []
             self.position = 0
+            self.feature_dim = feature_dim
+
+        def _format_state(self, array_like):
+            vector = np.asarray(array_like, dtype=np.float32).flatten()
+            if vector.shape[0] < self.feature_dim:
+                pad = np.zeros(self.feature_dim - vector.shape[0], dtype=np.float32)
+                vector = np.concatenate([vector, pad])
+            elif vector.shape[0] > self.feature_dim:
+                vector = vector[: self.feature_dim]
+            return vector
 
         def push(self, state, action, reward, next_state, done):
             if len(self.buffer) < self.capacity:
                 self.buffer.append(None)
             self.buffer[self.position] = (
-                np.array(state, dtype=np.float32),
+                self._format_state(state),
                 action,
                 np.float32(reward),
-                np.array(next_state, dtype=np.float32),
+                self._format_state(next_state),
                 bool(done),
             )
             self.position = (self.position + 1) % self.capacity
@@ -53,7 +63,7 @@ def build_model(state_dim):
             return len(self.buffer)
 
     meta_network = metaNetwork(state_dim, 1)
-    meta_memory = ReplayBuffer(10000)
+    meta_memory = ReplayBuffer(10000, state_dim)
     return meta_network, meta_memory
 
 
