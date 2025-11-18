@@ -15,6 +15,9 @@ from gymnasium.utils.save_video import save_video
 
 def build_model():
     env = build_env()
+    sample_state, _ = env.reset()
+    state_dim = len(process_state(sample_state))
+    action_dim = env.action_space.n
     class Cartpole_Network(nn.Module):
         def __init__(self, state_size, action_size, hidden_size=128):
             super(Cartpole_Network, self).__init__()
@@ -55,9 +58,6 @@ def build_model():
         def __len__(self):
             return len(self.buffer)
 
-    state_dim = env.observation_space.shape[0]
-    action_dim = env.action_space.n
-
     policy_net = Cartpole_Network(state_dim, action_dim)
     #target network learns more slowly to stabilize training
     target_network = Cartpole_Network(state_dim, action_dim)
@@ -77,8 +77,22 @@ def build_model():
     return policy_net, target_network, memory, optimizer, device, env
 
 def build_env():
-    env = gym.make("CartPole-v1",render_mode = "human")
+    env = gym.make("CartPole-v1",render_mode='rgb_array')
     return env
+
+def process_state(raw_state):
+    #Normalizes the state given into the nuerla network
+    x, x_dot, theta, theta_dot = raw_state
+    X_LIMIT = 4.8
+
+    sin_theta = math.sin(theta)
+    cos_theta = math.cos(theta)
+    norm_x = np.clip(x / X_LIMIT, -1.0, 1.0)
+    norm_x_dot = np.tanh(x_dot)
+    norm_theta_dot = np.tanh(theta_dot)
+
+    return np.array([norm_x, norm_x_dot, sin_theta, cos_theta, norm_theta_dot], dtype=np.float32)
+
 
 
 #The enviorment outputs an array of 4 values: cart position, cart velocity, pole angle, pole angular velocity
@@ -131,8 +145,11 @@ def optimize_model(policy_net, target_net, memory, optimizer, device, batch_size
     loss.backward()
     optimizer.step()
 
-def save_best_model(episodes_finished, current_best_reward, reward,env):
-    if (reward > current_best_reward) and (episodes_finished > 100):
-        save_video(env, "best_model_video.mp4", fps=30)
-        current_best_reward = reward
+def save_best_model(episodes_finished, current_best_reward, reward, frames, fps=30, video_folder="cartpole_videos"):
+    if not frames:
+        return current_best_reward
+    if (reward > current_best_reward) and (episodes_finished > 1000):
+        save_video(frames, video_folder, fps=fps, name_prefix="best_model")
+        return reward
+    return current_best_reward
         

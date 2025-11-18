@@ -56,7 +56,7 @@ def build_model(state_dim,):
 def sliding_window(data,window_size):
     new_list = []
     length = len(data)
-    for i in range(window_size):
+    for i in range(max(window_size,length)):
         new_list.append(data[(length - window_size) + i])
 
     return new_list
