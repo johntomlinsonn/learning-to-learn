@@ -145,11 +145,11 @@ def optimize_model(policy_net, target_net, memory, optimizer, device, batch_size
     loss.backward()
     optimizer.step()
 
-def save_best_model(episodes_finished, current_best_reward, reward, frames, fps=30, video_folder="cartpole_videos"):
+def save_best_model(episodes_finished, current_best_reward, reward, frames, fps=30, video_folder="metanetwork"):
     if not frames:
         return current_best_reward
-    if (reward > current_best_reward) and (episodes_finished > 0):
-        save_video(frames, video_folder, fps=fps, name_prefix="best_model")
+    if (reward > 400 ) and (episodes_finished > 0):
+        save_video(frames, video_folder, fps=fps, name_prefix="meta-network")
         return reward
     return current_best_reward
         
