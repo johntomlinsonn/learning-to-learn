@@ -5,8 +5,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.nn.utils import clip_grad_norm_
 
 _DEFAULT_META_LR = 1e-3
+_SHAPING_MIN = -1.0
+_SHAPING_MAX = 1.0
 
 
 def build_model(state_dim):
@@ -42,67 +45,66 @@ def build_model(state_dim):
                 vector = vector[: self.feature_dim]
             return vector
 
-        def push(self, state, action, reward, next_state, done):
+        def push(self, state, target_value):
             if len(self.buffer) < self.capacity:
                 self.buffer.append(None)
             self.buffer[self.position] = (
                 self._format_state(state),
-                action,
-                np.float32(reward),
-                self._format_state(next_state),
-                bool(done),
+                np.float32(target_value),
             )
             self.position = (self.position + 1) % self.capacity
 
         def sample(self, batch_size):
+            batch_size = min(batch_size, len(self.buffer))
             batch = rand.sample(self.buffer, batch_size)
-            state, action, reward, next_state, done = map(np.stack, zip(*batch))
-            return state, action, reward, next_state, done
+            state, target = map(np.stack, zip(*batch))
+            return state, target
 
         def __len__(self):
             return len(self.buffer)
 
-    meta_network = metaNetwork(state_dim, 1)
+    meta_network = metaNetwork(state_dim)
     meta_memory = ReplayBuffer(10000, state_dim)
     return meta_network, meta_memory
 
 
-def sliding_window(data,window_size):
-    return data[-(min(len(data),window_size)):]
+def sliding_window(data, window_size):
+    return data[-(min(len(data), window_size)) :]
 
 def compute_reward(reward_list):
     reward_list = np.array(reward_list, dtype=float)
-    N = len(reward_list)
-    if N < 2:
-        return np.array(0.0, dtype=float)
+    if reward_list.size < 2:
+        return 0.0
 
     deltas = np.diff(reward_list)
     meta_reward = np.mean(deltas)
 
-    return np.array(meta_reward, dtype=float)
+    return float(meta_reward)
 
 
-
-def select_action(state, original_action, reward_given, meta_net, device, epsilon, input_dim):
-    if np.random.rand() < epsilon:
-        return float(np.random.uniform(-1.0, 1.0))
-
+def _prepare_features(state, original_action, reward_given, input_dim):
     features = np.asarray(state, dtype=np.float32).flatten()
-    features = np.concatenate([
-        features,
-        np.array([float(original_action), float(reward_given)], dtype=np.float32),
-    ])
+    augments = np.array([float(original_action), float(reward_given)], dtype=np.float32)
+    features = np.concatenate([features, augments])
     if features.shape[0] < input_dim:
         pad = np.zeros(input_dim - features.shape[0], dtype=np.float32)
         features = np.concatenate([features, pad])
     elif features.shape[0] > input_dim:
         features = features[:input_dim]
+    return features
 
+
+def select_action(state, original_action, reward_given, meta_net, device, epsilon, input_dim, return_features=False):
+    features = _prepare_features(state, original_action, reward_given, input_dim)
     state_t = torch.as_tensor(features, dtype=torch.float32, device=device).unsqueeze(0)
     with torch.no_grad():
-        action_t = meta_net(state_t)
-    action = float(action_t.squeeze().item())
-    return float(np.clip(action, -1.0, 1.0))
+        prediction = meta_net(state_t).squeeze().item()
+    shaping_value = float(np.clip(prediction, _SHAPING_MIN, _SHAPING_MAX))
+    if np.random.rand() < epsilon:
+        shaping_value = float(np.random.uniform(_SHAPING_MIN, _SHAPING_MAX))
+    if return_features:
+        return shaping_value, features
+    return shaping_value
 
 
 def _ensure_optimizer(meta_net, lr=_DEFAULT_META_LR):
@@ -111,32 +113,28 @@ def _ensure_optimizer(meta_net, lr=_DEFAULT_META_LR):
     return meta_net._meta_optimizer
 
 
-def _optimize_step(meta_net, memory, optimizer, device, batch_size=64, gamma=0.99):
-    if len(memory) < batch_size:
+def _optimize_step(meta_net, memory, optimizer, device, batch_size=64):
+    if len(memory) == 0:
         return
-    state, action, reward, next_state, done = memory.sample(batch_size)
+    state, target = memory.sample(batch_size)
 
     state = torch.FloatTensor(state).to(device)
-    next_state = torch.FloatTensor(next_state).to(device)
-    action = torch.LongTensor(action).unsqueeze(1).to(device)
-    reward = torch.FloatTensor(reward).unsqueeze(1).to(device)
-    done = torch.FloatTensor(done).unsqueeze(1).to(device)
+    target = torch.FloatTensor(target).unsqueeze(1).to(device)
 
-    q_values = meta_net(state).gather(1, action)
-    next_q_values = meta_net(next_state).max(1)[0].unsqueeze(1)
-    expected_q_values = reward + (gamma * next_q_values * (1 - done))
-
-    loss = F.mse_loss(q_values, expected_q_values)
+    prediction = meta_net(state)
+    loss = F.mse_loss(prediction, target)
 
     optimizer.zero_grad()
     loss.backward()
+    clip_grad_norm_(meta_net.parameters(), 1.0)
     optimizer.step()
 
 
-def optimize_model(meta_net, memory, device, optimizer=None, batch_size=64, gamma=0.99, lr=_DEFAULT_META_LR):
+def optimize_model(meta_net, memory, device, optimizer=None, batch_size=64, lr=_DEFAULT_META_LR):
     """Module-level helper for training the meta network."""
+    if len(memory) == 0:
+        return
     optimizer = optimizer or _ensure_optimizer(meta_net, lr)
-    _optimize_step(meta_net, memory, optimizer, device, batch_size, gamma)
-
+    _optimize_step(meta_net, memory, optimizer, device, batch_size)
 
 

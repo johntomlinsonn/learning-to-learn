@@ -11,6 +11,7 @@ import torch.optim as optim
 import math
 import random
 from gymnasium.utils.save_video import save_video
+from torch.nn.utils import clip_grad_norm_
 
 
 def build_model():
@@ -124,7 +125,7 @@ def update_target_network(policy_net, target_net):
     return target_net
 
 
-def optimize_model(policy_net, target_net, memory, optimizer, device, batch_size=64, gamma=0.99):
+def optimize_model(policy_net, target_net, memory, optimizer, device, batch_size=64, gamma=0.99, max_grad_norm=1.0):
     if len(memory) < batch_size:
         return
     state, action, reward, next_state, done = memory.sample(batch_size)
@@ -143,6 +144,8 @@ def optimize_model(policy_net, target_net, memory, optimizer, device, batch_size
 
     optimizer.zero_grad()
     loss.backward()
+    if max_grad_norm is not None:
+        clip_grad_norm_(policy_net.parameters(), max_grad_norm)
     optimizer.step()
 
 def save_best_model(episodes_finished, current_best_reward, reward, frames, fps=30, video_folder="metanetwork"):
