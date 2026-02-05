@@ -82,7 +82,6 @@ def build_env():
     return env
 
 def process_state(raw_state):
-    #Normalizes the state given into the nuerla network
     x, x_dot, theta, theta_dot = raw_state
     X_LIMIT = 4.8
 
