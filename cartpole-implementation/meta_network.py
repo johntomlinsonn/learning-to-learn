@@ -131,7 +131,6 @@ def _optimize_step(meta_net, memory, optimizer, device, batch_size=64):
 
 
 def optimize_model(meta_net, memory, device, optimizer=None, batch_size=64, lr=_DEFAULT_META_LR):
-    """Module-level helper for training the meta network."""
     if len(memory) == 0:
         return
     optimizer = optimizer or _ensure_optimizer(meta_net, lr)
